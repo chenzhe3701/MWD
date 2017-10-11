@@ -5,7 +5,7 @@ m = [0 1 0]';
 n = [1 0 0]';
 g = 0.2;
 
-F = eye(3) + g*m*n';
+F = eye(3) + g*m*n';    % Eq[14]
 dx_dX = F;
 du_dX = F - eye(3);
 e_small = 1/2*(du_dX + du_dX');
@@ -75,8 +75,66 @@ FA = eye(3) + alpha*m1*n1'
 FB = eye(3) + beta*alpha*m2*n2'
 F = FB*FA                           % (4) is the same as (3), both assume total shear occurs in one step
 
-% after eq [30] 
+% case of (110)[-112] compression
+I1 = [1 0 0];   % cubic axes
+I2 = [0 1 0];
+I3 = [0 0 1];
+
+i1 = [1 1 0];   % specimen axes
+i2 = [-1 1 -1];
+i3 = [-1 1 2];
+
+i1 = i1/norm(i1);   % normalize
+i2 = i2/norm(i2);
+i3 = i3/norm(i3);
+
+dcm = [dot(i1,I1), dot(i1,I2), dot(i1,I3);
+    dot(i2,I1), dot(i2,I2), dot(i2,I3);
+    dot(i3,I1), dot(i3,I2), dot(i3,I3)]
+[phi1_r,phi_r,phi2_r] = dcm2angle(dcm,'zxz')
+phi1 = phi1_r/pi*180
+phi = phi_r/pi*180
+phi2 = phi2_r/pi*180
+
+Na = [1 1 1]';  % plane normal, ss-1, cubic axes
+Ma = [1 0 -1]'; % slip direction, ss-1
+Nb = [1 1 -1]'; % plane normal, ss-2
+Mb = [0 1 1]';  % lsip direction, ss-2
+
+na = -dcm*Na/norm(Na)    % Eq[26] 'specimen axis'
+ma = dcm*Ma/norm(Ma)
+nb = -dcm*Nb/norm(Nb)
+mb = dcm*Mb/norm(Mb)
+
+beta = 1;
+Fa = eye(3) + ma*na'    % Eq[28]
+Fb = eye(3) + mb*nb'    % Eq[29]
+Fb*Fa
 F1 = [-2/sqrt(6) 0 0; 0 0 0; 0 -1/sqrt(3) 2/sqrt(6)];
-[V,D] = eig(F1)
+F1 = ma*na'+ beta* mb*nb'
+F2 = beta* mb*nb'*ma*na'
+
+[V,D] = eig(F1);
+V * diag(exp(diag(1*D))) /(V)
+expm(1*F1)                 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
