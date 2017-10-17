@@ -60,7 +60,7 @@ F = Fd+eye(2)
 % "The decay filter is a 90% center-weighted Gaussian filter and works best for most situations" 
 % I tried at least two fitler_size (5 and 11)
 
-load('WE43_T6_C1_s5_r0c0_exx_filter_5.mat','exx1','exx2','sigma','filter_size');
+load('WE43_T6_C1_s5_r0c0_exx_fs_5.mat','exx1','exx2','sigma','filter_size');
 hfs = (filter_size-1)/2;
 s = ones(size(sigma));
 s(sigma==-1)=0;
@@ -117,7 +117,7 @@ pdf('normal',0,0,1)/pdf('normal',tos,0,1)
 s_dp = hfs/tos     % when hFilterSize corresponds to tos, sigma value in unit of # of data points
 
 h = fspecial('gaussian',filter_size,s_dp)    % the filter with the calculated sigma, and with 90% cummulative prob within area of filterSize.  Filter is square
-
+filter_size/s_dp        % numerically, filter_size = 3.5448 times of s_dp 
 
 %% (3) use matrix method to calculate for all data points (finite strain)
 load('WE43_T6_C1_s5_r0c0.mat')
