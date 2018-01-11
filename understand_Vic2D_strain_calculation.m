@@ -1,7 +1,11 @@
 % this code tries to investigate how Vic2D calculates Lagrangian strain
 %
 % chenzhe, 2017-10-02
+%
+% chenzhe, 2018-01-10
+% maybe there was an error?  plot point position and edit.
 
+clc; close all;
 % (1) Pick 3 points, and show how strain was calculated using these 3 points
 % edge length of original triangle
 dL = x(1,2) - x(1,1)
@@ -12,6 +16,14 @@ v(sigma==-1) = nan;
 iR = 10;
 iC = 10;
 
+% plot points of interest.
+figure;
+hold on;
+plot([x(iR-1,iC),x(iR,iC),x(iR,iC+1)],[y(iR-1,iC),y(iR,iC),y(iR,iC+1)],'-or');
+plot([x(iR-1,iC),x(iR,iC),x(iR,iC+1)]+[u(iR-1,iC),u(iR,iC),u(iR,iC+1)] - u(iR,iC),...
+    [y(iR-1,iC),y(iR,iC),y(iR,iC+1)]+[v(iR-1,iC),v(iR,iC),v(iR,iC+1)] - v(iR,iC),'-ob');
+set(gca,'ydir','reverse');
+
 % right point
 du1 = u(iR,iC+1) - u(iR,iC)
 dv1 = v(iR,iC+1) - v(iR,iC)
@@ -19,40 +31,103 @@ dv1 = v(iR,iC+1) - v(iR,iC)
 du2 = u(iR-1,iC) - u(iR,iC)
 dv2 = v(iR-1,iC) - v(iR,iC)
 
+% use right point to calculate d?/dX
 dudX = du1/dL
 dvdX = dv1/dL
+% use up point to calcualte d?/dY
 dudY = du2/(-dL)    % when going up, Y decreases, so dY<0, dY = (-dL)
 dvdY = dv2/(-dL)
 
+disp('displacement gradient Fd = ')
 Fd = [dudX dudY; dvdX dvdY]     % 'displacement gradient'
-
+disp('note: in the following, Fu and Fu_d are both displacement gradient rather than deformation gradient.')
+disp('Only deformation gradient should use the letter F')
+%% (1a) old (2017-10 method of rotation back).
+disp('2017-10 method: on 2018-10 I found this was likely a mistake, but still did not affect the finite strain --------------------------------')
 theta = atand(dv1/du1)
 M = [cosd(theta), cosd(theta-90);
     cosd(theta+90), cosd(theta)]
 R = M'
 
 t = M*[du1;dv1]
-du1 = t(1)
-dv1 = t(2)
+du3 = t(1)
+dv3 = t(2)
 
 t = M*[du2;dv2]
-du2 = t(1)
-dv2 = t(2)
+du4 = t(1)
+dv4 = t(2)
     
-dudX = du1/dL
-dvdX = dv1/dL
-dudY = du2/(-dL)
-dvdY = dv2/(-dL)
+dudX = du3/dL
+dvdX = dv3/dL
+dudY = du4/(-dL)
+dvdY = dv4/(-dL)
 
 % something like the 'stretch tensor', but
 % (1) this Fu is not symmetric, while 'stretch tensor' seems have to be symmetric according to the definition I know.
 % (2) this Fu is also not the 'raw'.  The rotation is taken off, but in an 'artificial' way, i.e., forcing deformed x-edge to be horizontal.  
-Fu = [dudX dudY; dvdX dvdY]      
+Fu = [dudX dudY; dvdX dvdY]  
+disp('R*Fu-Fd: ')
 R*Fu - Fd   % This is equal.  I don't know why eliminate rotation first.
+% chenzhe, 2018-01: R*Fu ~= Fd.  But there was a mistake before.  The rotation angle I used was not correct.
+% Moreover, using F=I+Fu vs F=I+Fd, the finite strain was not equal.
+
+% finite strain assumption
 F = Fd+eye(2)
-(F'*F-eye(2))/2
-(Fu'+Fu)/2
+E_finite_raw = (F'*F-eye(2))/2
+
+F = Fu+eye(2)
+E_finite_rotate_first = (F'*F-eye(2))/2
+
+disp('E_finite_raw - E_finite_rotate_first = ')
+E_finite_raw - E_finite_rotate_first
+
+% small strain assumption
+disp('small strain, raw:')
 (Fd'+Fd)/2
+disp('small strain, rotate first:')
+(Fu'+Fu)/2
+
+
+%% (1b) new (2018-01) method of rotation back
+disp('2018-01 method: --------------------------------')
+theta = atand(dv1/(du1+dL))
+M = [cosd(theta), cosd(theta-90);
+    cosd(theta+90), cosd(theta)]
+R = M'
+
+t = M*[dL+du1;dv1]
+du5 = t(1)-dL
+dv5 = t(2)
+
+t = M*[du2;-dL+dv2]
+du6 = t(1)
+dv6 = t(2) - (-dL)
+    
+dudX = du5/dL
+dvdX = dv5/dL
+dudY = du6/(-dL)
+dvdY = dv6/(-dL)
+
+Fu_b = [dudX dudY; dvdX dvdY]
+disp('R*Fu_b - Fd: ')
+R*Fu_b - Fd   % chenzhe, 2018-01.  R*Fu_b != Fd.  However, using finite strain definition, the strain calculated by Fu_b = the strain calculated by Fd.
+
+% finite strain assumption
+F = Fd+eye(2)
+E_finite_raw = (F'*F-eye(2))/2
+
+F = Fu_b+eye(2)
+E_finite_rotate_first = (F'*F-eye(2))/2
+
+disp('E_finite_raw - E_finite_rotate_first = ')
+E_finite_raw - E_finite_rotate_first
+
+% small strain assumption
+disp('small strain, raw:')
+(Fd'+Fd)/2
+disp('small strain, rotate first:')
+(Fu_b'+Fu_b)/2
+
 
 %% (2) Find out how Vic2D's filter looks ( step 3 was actually done first, but cound't match Vic's description, so here just find out what Vic is using)
 % exx1 is some raw data.  exx2 is the data after applying Vic's 'decay filter'. 
@@ -120,6 +195,8 @@ h = fspecial('gaussian',filter_size,s_dp)    % the filter with the calculated si
 filter_size/s_dp        % numerically, filter_size = 3.5448 times of s_dp 
 
 %% (3) use matrix method to calculate for all data points (finite strain)
+% looks like on 2017-10, I did not do the rotation, based on the fact that without rotation, the finite strain calculation was almost the same.  
+
 load('WE43_T6_C1_s5_r0c0.mat')
 dL = x(1,2) - x(1,1);
 
