@@ -40,7 +40,7 @@ dvdY = dv2/(-dL)
 
 disp('displacement gradient Fd = ')
 Fd = [dudX dudY; dvdX dvdY]     % 'displacement gradient'
-disp('note: in the following, Fu and Fu_d are both displacement gradient rather than deformation gradient.')
+disp('note: Fd, Fu and Fu_d are all displacement gradient rather than deformation gradient.')
 disp('Only deformation gradient should use the letter F')
 %% (1a) old (2017-10 method of rotation back).
 disp('2017-10 method: on 2018-10 I found this was likely a mistake, but still did not affect the finite strain --------------------------------')
